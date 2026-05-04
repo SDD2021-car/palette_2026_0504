@@ -1,0 +1,169 @@
+{
+    "name": "sen1-2_scene_2025.03.10", // experiments name
+    "gpu_ids": [7], // gpu ids list, default is single 0
+    "seed" : 72, // random seed, seed <0 represents randomization not used
+    "finetune_norm": true, // find the parameters to optimize
+
+    "path": { //set every part file path
+        "base_dir": "experiments_sen12_scene", // base path for all log except resume_state
+        "code": "code", // code backup
+        "tb_logger": "tb_logger", // path of tensorboard logger
+        "results": "results",
+        "checkpoint": "checkpoint_sen12_scene",
+//        "resume_state": "experiments/train_colorization_sar2opt2_240521_100718/checkpoint/500"
+        "resume_state":"/data/cyh/pallete/experiments_sen12_scene/train_sen1-2_scene_2025.03.10_250313_181632/checkpoint_sen12_scene/200"
+//        null,
+       // ex: 100, loading .state  and .pth from given epoch and iteration
+//        "/data/yjy_data/Palette_S2O_0724/experiments_SAR2OPT/train_colorization_sar2opt_240904_220840/checkpoint/1800"
+    },
+
+    "datasets": { // train or test
+        "train": {
+            "which_dataset": {  // import designated dataset using arguments
+                "name": ["data.dataset", "ColorizationDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
+                "args":{ // arguments to initialize dataset
+                    "data_root": "/data/hjf/Dataset/SEN12_Scene",
+                    "data_flist": "/data/hjf/Dataset/SEN12_Scene/SEN12_Scene_train.txt",
+                    "data_len": -1
+                }
+            },
+            "dataloader":{
+                "validation_split": 32, // percent or number
+                "args":{ // arguments to initialize train_dataloader
+                    "batch_size": 2, // batch size in each gpu
+                    "num_workers": 4,
+                    "shuffle": true,
+                    "pin_memory": true,
+                    "drop_last": true
+                },
+                "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
+                    "batch_size": 2, // batch size in each gpu
+                    "num_workers": 4,
+                    "shuffle": false,
+                    "pin_memory": true,
+                    "drop_last": false
+                }
+            }
+        },
+        "test": {
+            "which_dataset": {
+                "name": ["data.dataset", "ColorizationDataset"], // import Dataset() class / function(not recommend) from default file
+                "args":{
+                    "data_root": "/data/hjf/Dataset/SEN12_Scene",
+                    "data_flist": "/data/hjf/Dataset/SEN12_Scene/SEN12_Scene_test.txt"
+                }
+            },
+            "dataloader":{
+                "args":{
+                    "batch_size": 2,
+                    "num_workers": 4,
+                    "pin_memory": true
+                }
+            }
+        },
+        "val": {
+            "which_dataset": {
+                "name": "ColorizationDataset", // import Dataset() class / function(not recommend) from default file
+                "args":{
+                    "data_root": "/data/hjf/Dataset/SEN12_Scene",
+                    "data_flist": "/data/hjf/Dataset/SEN12_Scene/SEN12_Scene_test.txt"
+                }
+            },
+            "dataloader":{
+                "args":{
+                    "batch_size": 2,
+                    "num_workers": 4,
+                    "shuffle": false,
+                    "pin_memory": true,
+                    "drop_last": false
+                }
+            }
+        }
+    },
+
+    "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
+        "which_model": { // import designated  model(trainer) using arguments
+            "name": ["models.model", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
+            "args": {
+                "sample_num": 11, // process of each image
+                "task": "colorization",
+                "ema_scheduler": {
+                    "ema_start": 1,
+                    "ema_iter": 1,
+                    "ema_decay": 0.9999
+                },
+                "optimizers": [
+                    { "lr": 1e-4, "weight_decay": 0}
+                ]
+            }
+        },
+        "which_networks": [ // import designated list of networks using arguments
+            {
+//                "name": ["models.network", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py])
+                "name": ["models.network", "Network"],
+                "args": { // arguments to initialize network
+                    "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
+                    "module_name": "guided_diffusion", // sr3 | guided_diffusion
+                    "unet": {
+                        "in_channel": 6,
+                        "out_channel": 3,
+                        "inner_channel": 64,
+                        "channel_mults": [
+                            1,
+                            2,
+                            4,
+                            8
+                        ],
+                        "attn_res": [
+                            // 32,
+                            16
+                            // 8
+                        ],
+                        "num_head_channels": 32,
+                        "res_blocks": 2,
+                        "dropout": 0.2,
+                        "image_size": 256
+                    },
+                    "beta_schedule": {
+                        "train": {
+                            "schedule": "linear",
+                            "n_timestep": 2000,
+                            // "n_timestep": 5, // debug
+                            "linear_start": 1e-6,
+                            "linear_end": 0.01
+                        },
+                        "test": {
+                            "schedule": "linear",
+                            "n_timestep":2000,
+                            "linear_start": 1e-6,
+                            "linear_end": 0.009,
+                            "timestep_respacing": [200]
+                        }
+                    }
+                }
+            }
+        ],
+        "which_losses": [ // import designated list of losses without arguments
+            "mse_loss" // import mse_loss() function/class from default file (default is [models/losses.py]), equivalent to { "name": "mse_loss", "args":{}
+        ],
+        "which_metrics": [ // import designated list of metrics without arguments
+            "mae" // import mae() function/class from default file (default is [models/metrics.py]), equivalent to { "name": "mae", "args":{}}
+        ]
+    },
+
+    "train": { // arguments for basic training
+        "n_epoch": 10000, // max epochs, not limited now
+        "n_iter": 1e9, // max interations
+        "val_epoch": 100, // valdation every specified number of epochs
+        "save_checkpoint_epoch": 50,
+        "log_iter": 1e4, // log every specified number of iterations
+        "tensorboard" : false // tensorboardX enable
+    },
+    
+    "debug": { // arguments in debug mode, which will replace arguments in train
+        "val_epoch": 1,
+        "save_checkpoint_epoch": 1,
+        "log_iter": 10,
+        "debug_split": 50 // percent or number, change the size of dataloder to debug_split.
+    }
+}
