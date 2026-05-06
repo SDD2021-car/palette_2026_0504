@@ -69,16 +69,46 @@ def main_worker(gpu, ngpus_per_node, opt):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default='/data/cyh/pallete/config/GF3_sar2opt.json', help='JSON file for configuration')
-    parser.add_argument('-p', '--phase', type=str,  default='test')
+    parser.add_argument('-c', '--config', type=str, default='/NAS_data/yjy/palette_color_hint/config/colorization_sar2opt.json', help='JSON file for configuration')
+    parser.add_argument('-p', '--phase', type=str,  default='train')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
-    parser.add_argument('-gpu', '--gpu_ids', type=str, default='1')
+    parser.add_argument('-gpu', '--gpu_ids', type=str, default='7')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-P', '--port', default='21012', type=str)
+    parser.add_argument('--color_hint_root', type=str, default=None, help='Default sparse color hint RGB directory (fallback for all phases).')
+    parser.add_argument('--color_mask_root', type=str, default=None, help='Default binary hint mask directory (fallback for all phases).')
+    parser.add_argument('--train_color_hint_root', type=str, default=None, help='Sparse color hint RGB directory for train dataset.')
+    parser.add_argument('--train_color_mask_root', type=str, default=None, help='Binary hint mask directory for train dataset.')
+    parser.add_argument('--val_color_hint_root', type=str, default=None, help='Sparse color hint RGB directory for val dataset.')
+    parser.add_argument('--val_color_mask_root', type=str, default=None, help='Binary hint mask directory for val dataset.')
+    parser.add_argument('--test_color_hint_root', type=str, default=None, help='Sparse color hint RGB directory for test dataset.')
+    parser.add_argument('--test_color_mask_root', type=str, default=None, help='Binary hint mask directory for test dataset.')
 
     ''' parser configs '''
     args = parser.parse_args()
     opt = Praser.parse(args)
+    def _set_hint_roots(phase_name, hint_root, mask_root):
+        if phase_name not in opt['datasets']:
+            return
+        if hint_root is not None:
+            opt['datasets'][phase_name]['which_dataset']['args']['color_hint_root'] = hint_root
+        if mask_root is not None:
+            opt['datasets'][phase_name]['which_dataset']['args']['color_mask_root'] = mask_root
+
+    # phase-specific override first
+    _set_hint_roots('train', args.train_color_hint_root, args.train_color_mask_root)
+    _set_hint_roots('val', args.val_color_hint_root, args.val_color_mask_root)
+    _set_hint_roots('test', args.test_color_hint_root, args.test_color_mask_root)
+
+    # fallback default for any phase that did not get explicit override
+    for _phase in ['train', 'val', 'test']:
+        if _phase not in opt['datasets']:
+            continue
+        ds_args = opt['datasets'][_phase]['which_dataset']['args']
+        if args.color_hint_root is not None and ds_args.get('color_hint_root') is None:
+            ds_args['color_hint_root'] = args.color_hint_root
+        if args.color_mask_root is not None and ds_args.get('color_mask_root') is None:
+            ds_args['color_mask_root'] = args.color_mask_root
     
     ''' cuda devices '''
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])

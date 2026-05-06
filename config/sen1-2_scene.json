@@ -1,6 +1,6 @@
 {
-    "name": "sen1-2_scene_2025.03.10", // experiments name
-    "gpu_ids": [7], // gpu ids list, default is single 0
+    "name": "sen1-2_scene_color_hint_20260505", // experiments name
+    "gpu_ids": [1], // gpu ids list, default is single 0
     "seed" : 72, // random seed, seed <0 represents randomization not used
     "finetune_norm": true, // find the parameters to optimize
 
@@ -11,7 +11,7 @@
         "results": "results",
         "checkpoint": "checkpoint_sen12_scene",
 //        "resume_state": "experiments/train_colorization_sar2opt2_240521_100718/checkpoint/500"
-        "resume_state":"/data/cyh/pallete/experiments_sen12_scene/train_sen1-2_scene_2025.03.10_250313_181632/checkpoint_sen12_scene/200"
+        "resume_state":null
 //        null,
        // ex: 100, loading .state  and .pth from given epoch and iteration
 //        "/data/yjy_data/Palette_S2O_0724/experiments_SAR2OPT/train_colorization_sar2opt_240904_220840/checkpoint/1800"
@@ -30,7 +30,7 @@
             "dataloader":{
                 "validation_split": 32, // percent or number
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 2, // batch size in each gpu
+                    "batch_size": 10, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": true,
                     "pin_memory": true,

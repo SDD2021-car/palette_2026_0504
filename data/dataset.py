@@ -143,7 +143,8 @@ class UncroppingDataset(data.Dataset):
 
 
 class ColorizationDataset(data.Dataset):
-    def __init__(self, data_root, data_flist, data_len=-1, image_size=[256, 256], loader=pil_loader):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[256, 256], loader=pil_loader,
+                 color_hint_root=None, color_mask_root=None, phase='train'):
         self.data_root = data_root
         flist = make_dataset(data_flist)
         if data_len > 0:
@@ -157,14 +158,28 @@ class ColorizationDataset(data.Dataset):
         ])
         self.loader = loader
         self.image_size = image_size
+        self.color_hint_root = color_hint_root
+        self.color_mask_root = color_mask_root
+        self.phase = phase
+
+    def _resolve_pair_folders(self):
+        if self.phase == 'train':
+            return 'trainA', 'trainB'
+        return 'testA', 'testB'
 
     def __getitem__(self, index):
         ret = {}
         file_name = str(self.flist[index])  # .zfill(5) + '.png'
-        corresponding_file_name = file_name.replace('_s1_', '_s2_')
-        img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'testB', corresponding_file_name)))
-        cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'testA', file_name)))
-
+        folder_a, folder_b = self._resolve_pair_folders()
+        # corresponding_file_name = file_name.replace('_s1_', '_s2_')
+        img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, "A", file_name)))
+        cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, "B", file_name)))
+        if self.color_hint_root is not None and self.color_mask_root is not None:
+            hint_rgb = self.tfs(self.loader(os.path.join(self.color_hint_root, file_name)))
+            hint_mask = self.tfs(self.loader(os.path.join(self.color_mask_root, file_name)))[0:1]
+            ret['hint_input'] = torch.cat([hint_rgb, hint_mask], dim=0)
+        else:
+            ret['hint_input'] = torch.zeros(4, self.image_size[0], self.image_size[1], dtype=img.dtype)
         ret['gt_image'] = img
         ret['cond_image'] = cond_image
         ret['path'] = file_name
@@ -173,4 +188,63 @@ class ColorizationDataset(data.Dataset):
     def __len__(self):
         return len(self.flist)
 
-
+# class ColorizationDataset(data.Dataset):
+#     def __init__(
+#         self,
+#         data_root,
+#         data_flist,
+#         data_len=-1,
+#         image_size=[256, 256],
+#         loader=pil_loader,
+#         color_hint_root=None,
+#         color_mask_root=None,
+#         cond_dir='testA',
+#         gt_dir='testB'
+#     ):
+#         self.data_root = data_root
+#         flist = make_dataset(data_flist)
+#
+#         if data_len > 0:
+#             self.flist = flist[:int(data_len)]
+#         else:
+#             self.flist = flist
+#
+#         self.tfs = transforms.Compose([
+#             transforms.Resize((image_size[0], image_size[1])),
+#             transforms.ToTensor(),
+#             transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+#         ])
+#
+#         self.loader = loader
+#         self.image_size = image_size
+#         self.color_hint_root = color_hint_root
+#         self.color_mask_root = color_mask_root
+#         self.cond_dir = cond_dir
+#         self.gt_dir = gt_dir
+#
+#     def __getitem__(self, index):
+#         ret = {}
+#         file_name = str(self.flist[index])
+#
+#         img = self.tfs(self.loader(os.path.join(self.data_root, self.gt_dir, file_name)))
+#         cond_image = self.tfs(self.loader(os.path.join(self.data_root, self.cond_dir, file_name)))
+#
+#         if self.color_hint_root is not None and self.color_mask_root is not None:
+#             hint_rgb = self.tfs(self.loader(os.path.join(self.color_hint_root, file_name)))
+#             hint_mask = self.tfs(self.loader(os.path.join(self.color_mask_root, file_name)))[0:1]
+#             ret['hint_input'] = torch.cat([hint_rgb, hint_mask], dim=0)
+#         else:
+#             ret['hint_input'] = torch.zeros(
+#                 4,
+#                 self.image_size[0],
+#                 self.image_size[1],
+#                 dtype=img.dtype
+#             )
+#
+#         ret['gt_image'] = img
+#         ret['cond_image'] = cond_image
+#         ret['path'] = file_name
+#         return ret
+#
+#     def __len__(self):
+#         return len(self.flist)

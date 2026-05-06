@@ -37,7 +37,13 @@ def define_dataloader(logger, opt):
 def define_dataset(logger, opt):
     ''' loading Dataset() class from given file's name '''
     dataset_opt = opt['datasets'][opt['phase']]['which_dataset']
-    phase_dataset = init_obj(dataset_opt, logger, default_file_name='data.dataset', init_type='Dataset')
+    phase_dataset = init_obj(
+        dataset_opt,
+        logger,
+        default_file_name='data.dataset',
+        init_type='Dataset',
+        phase=opt['phase']
+    )
     val_dataset = None
 
     valid_len = 0
@@ -54,8 +60,13 @@ def define_dataset(logger, opt):
     
     ''' divide validation dataset, valid_split==0 when phase is test or validation_split is 0. '''
     if valid_split > 0.0 or 'debug' in opt['name']:
-        val_dataset = init_obj(opt['datasets']['val']['which_dataset'], logger, default_file_name='data.dataset',
-                               init_type='Dataset')
+        val_dataset = init_obj(
+            opt['datasets']['val']['which_dataset'],
+            logger,
+            default_file_name='data.dataset',
+            init_type='Dataset',
+            phase='val'
+        )
         data_len2 = len(val_dataset)
         if isinstance(valid_split, int):
             assert valid_split < data_len2, "Validation set size is configured to be larger than entire dataset."

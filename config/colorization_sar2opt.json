@@ -5,13 +5,13 @@
     "finetune_norm": false, // find the parameters to optimize
 
     "path": { //set every part file path
-        "base_dir": "experiments_SAR2Opt_600", // base path for all log except resume_state
+        "base_dir": "experiments_SAR2Opt_0506", // base path for all log except resume_state
         "code": "code", // code backup
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint_SAR2Opt_600",
 //        "resume_state": "experiments/train_colorization_sar2opt2_240521_100718/checkpoint/500"
-        "resume_state":"/data/yjy_data/Palette_S2O_0724/experiments_SAR2Opt_600/train_colorization_sar2opt_250127_222515/checkpoint_SAR2Opt_600/2800"
+        "resume_state":null
 //        null,
        // ex: 100, loading .state  and .pth from given epoch and iteration
 //        "/data/yjy_data/Palette_S2O_0724/experiments_SAR2OPT/train_colorization_sar2opt_240904_220840/checkpoint/1800"
@@ -49,8 +49,8 @@
             "which_dataset": {
                 "name": "ColorizationDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "/data/yjy_data/test",
-                    "data_flist": "/data/yjy_data/sar2opt_test.txt"
+                    "data_root": "/data/hjf/Palette_S2O/sar2opt/test",
+                    "data_flist": "/data/hjf/Palette_S2O/sar2opt/sar2opt_test.txt"
                 }
             },
             "dataloader":{
@@ -65,8 +65,8 @@
             "which_dataset": {
                 "name": "ColorizationDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "/data/hjf/Palette_S2O/sar2opt/val",
-                    "data_flist": "/data/hjf/Palette_S2O/sar2opt/sar2opt_val.txt"
+                    "data_root": "/data/hjf/Palette_S2O/sar2opt/test",
+                    "data_flist": "/data/hjf/Palette_S2O/sar2opt/sar2opt_test.txt"
                 }
             },
             "dataloader":{
