@@ -94,6 +94,31 @@ def dict2str(opt, indent_l=1):
             msg += ' ' * (indent_l * 2) + k + ': ' + str(v) + '\n'
     return msg
 
+def _normalize_image_size(image_size):
+    if image_size is None:
+        return None
+    if isinstance(image_size, int):
+        return [image_size, image_size]
+    if isinstance(image_size, (list, tuple)) and len(image_size) == 2:
+        return [int(image_size[0]), int(image_size[1])]
+    return None
+
+def _get_network_image_size(opt):
+    networks = opt.get('model', {}).get('which_networks', [])
+    if not networks:
+        return None
+    unet_args = networks[0].get('args', {}).get('unet', {})
+    return _normalize_image_size(unet_args.get('image_size'))
+
+def _sync_dataset_image_size(opt):
+    image_size = _get_network_image_size(opt)
+    if image_size is None:
+        return
+    for dataset_opt in opt.get('datasets', {}).values():
+        dataset_args = dataset_opt.get('which_dataset', {}).setdefault('args', OrderedDict())
+        dataset_args.setdefault('image_size', image_size)
+
+
 def parse(args):
     json_str = ''
     with open(args.config, 'r') as f:
@@ -108,7 +133,7 @@ def parse(args):
         opt['gpu_ids'] = [int(id) for id in args.gpu_ids.split(',')]
     if args.batch is not None:
         opt['datasets'][opt['phase']]['dataloader']['args']['batch_size'] = args.batch
- 
+    _sync_dataset_image_size(opt)
     ''' set cuda environment '''
     if len(opt['gpu_ids']) > 1:
         opt['distributed'] = True

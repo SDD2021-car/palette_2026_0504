@@ -143,7 +143,7 @@ class UncroppingDataset(data.Dataset):
 
 
 class ColorizationDataset(data.Dataset):
-    def __init__(self, data_root, data_flist, data_len=-1, image_size=[256, 256], loader=pil_loader,
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[512, 512], loader=pil_loader,
                  color_hint_root=None, color_mask_root=None, phase='train'):
         self.data_root = data_root
         flist = make_dataset(data_flist)
