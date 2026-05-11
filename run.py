@@ -72,9 +72,9 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--config', type=str, default='/NAS_data/yjy/palette_color_hint/config/colorization_sar2opt.json', help='JSON file for configuration')
     parser.add_argument('-p', '--phase', type=str,  default='train')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
-    parser.add_argument('-gpu', '--gpu_ids', type=str, default='7')
+    parser.add_argument('-gpu', '--gpu_ids', type=str, default='6')
     parser.add_argument('-d', '--debug', action='store_true')
-    parser.add_argument('-P', '--port', default='21012', type=str)
+    parser.add_argument('-P', '--port', default='21112', type=str)
     parser.add_argument('--color_hint_root', type=str, default=None, help='Default sparse color hint RGB directory (fallback for all phases).')
     parser.add_argument('--color_mask_root', type=str, default=None, help='Default binary hint mask directory (fallback for all phases).')
     parser.add_argument('--train_color_hint_root', type=str, default=None, help='Sparse color hint RGB directory for train dataset.')
@@ -83,10 +83,17 @@ if __name__ == '__main__':
     parser.add_argument('--val_color_mask_root', type=str, default=None, help='Binary hint mask directory for val dataset.')
     parser.add_argument('--test_color_hint_root', type=str, default=None, help='Sparse color hint RGB directory for test dataset.')
     parser.add_argument('--test_color_mask_root', type=str, default=None, help='Binary hint mask directory for test dataset.')
-
+    parser.add_argument('--use_mask_guided', dest='use_mask_guided', action='store_true', default=False, help='Use mask-guided processing for sparse color hint conditioning.')
+    parser.add_argument('--no_mask_guided', dest='use_mask_guided', action='store_false', help='Use direct color-hint cross attention without mask-guided processing.')
     ''' parser configs '''
     args = parser.parse_args()
     opt = Praser.parse(args)
+    configured_mask_guided = opt['model']['which_model']['args'].get('use_mask_guided', True)
+    use_mask_guided = args.use_mask_guided if args.use_mask_guided is not None else configured_mask_guided
+    opt['model']['which_model']['args']['use_mask_guided'] = use_mask_guided
+    for _phase in ['train', 'val', 'test']:
+        if _phase in opt['datasets']:
+            opt['datasets'][_phase]['which_dataset']['args']['use_mask_guided'] = use_mask_guided
     def _set_hint_roots(phase_name, hint_root, mask_root):
         if phase_name not in opt['datasets']:
             return

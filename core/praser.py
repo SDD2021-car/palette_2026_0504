@@ -119,6 +119,10 @@ def _sync_dataset_image_size(opt):
         dataset_args.setdefault('image_size', image_size)
 
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 def parse(args):
     json_str = ''
     with open(args.config, 'r') as f:

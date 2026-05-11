@@ -64,6 +64,9 @@ class MaskGuidedEmbedding(nn.Module):
         feat = raw_feat * norm_factor
         return feat.flatten(2).transpose(1, 2)
 
+    def forward_color_hint(self, color_hint):
+        feat = self.color_proj(color_hint)
+        return feat.flatten(2).transpose(1, 2)
 
 class SparseColorModulator(nn.Module):
     def __init__(self, patch_size=8, embed_dim=384):
@@ -72,16 +75,24 @@ class SparseColorModulator(nn.Module):
         self.post_norm = nn.LayerNorm(embed_dim)
         self.post_proj = nn.Linear(embed_dim, embed_dim, bias=True)
 
-    def forward(self, color_hint, mask):
-        tokens = self.embed(color_hint, mask)
+    def forward(self, color_hint, mask=None, use_mask_guided=True):
+        if use_mask_guided:
+            if mask is None:
+                raise ValueError("mask is required when use_mask_guided=True.")
+            tokens = self.embed(color_hint, mask)
+        else:
+            tokens = self.embed.forward_color_hint(color_hint)
         tokens = self.post_proj(self.post_norm(tokens))
         return tokens
 
-    def forward_from_hint_input(self, hint_input):
-        if hint_input.shape[1] != 4:
+    def forward_from_hint_input(self, hint_input, use_mask_guided=True):
+        if hint_input.shape[1] < 3:
+            raise ValueError(f"Expected hint_input with at least 3 RGB channels, got {hint_input.shape[1]}.")
+        if use_mask_guided and hint_input.shape[1] != 4:
             raise ValueError(f"Expected hint_input with 4 channels (RGB + mask), got {hint_input.shape[1]}.")
-        color_hint, mask = hint_input[:, :3], hint_input[:, 3:4]
-        return self.forward(color_hint=color_hint, mask=mask)
+        color_hint = hint_input[:, :3]
+        mask = hint_input[:, 3:4] if hint_input.shape[1] > 3 else None
+        return self.forward(color_hint=color_hint, mask=mask, use_mask_guided=use_mask_guided)
 
 
 class Upsample(nn.Module):
@@ -616,7 +627,7 @@ class UNet(nn.Module):
 
 
     # def forward(self, x, gammas,fm1,fm2):
-    def forward(self, x, gammas, hint_tokens=None,hint_input=None):
+    def forward(self, x, gammas, hint_tokens=None, hint_input=None, use_mask_guided=True):
         """
         Apply the model to an input batch.
         :param x: an [N x 2 x ...] Tensor of inputs (B&W)
@@ -629,7 +640,7 @@ class UNet(nn.Module):
         # i = 0
         h = x.type(torch.float32)
         if hint_tokens is None and hint_input is not None:
-            hint_tokens = self.sparse_color_modulator.forward_from_hint_input(hint_input.type(torch.float32))
+            hint_tokens = self.sparse_color_modulator.forward_from_hint_input(hint_input.type(torch.float32), use_mask_guided=use_mask_guided)
             hint_tokens = hint_tokens.transpose(1, 2)
         hint_tokens = self._prepare_hint_tokens(hint_tokens, h.shape[0], h.dtype)
         for module in self.input_blocks:

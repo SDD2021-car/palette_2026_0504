@@ -24,7 +24,7 @@ class EMA():
 
 
 class Palette(BaseModel):
-    def __init__(self, networks, losses, sample_num, task, optimizers, ema_scheduler=None, **kwargs):
+    def __init__(self, networks, losses, sample_num, task, optimizers, ema_scheduler=None, use_mask_guided=True, **kwargs):
         ''' must to init BaseModel with kwargs '''
         super(Palette, self).__init__(**kwargs)
 
@@ -66,6 +66,7 @@ class Palette(BaseModel):
 
         self.sample_num = sample_num
         self.task = task
+        self.use_mask_guided = use_mask_guided
 
     def set_input(self, data):
         ''' must use set_device in tensor '''
@@ -120,7 +121,7 @@ class Palette(BaseModel):
         for train_data in tqdm.tqdm(self.phase_loader):
             self.set_input(train_data)
             self.optG.zero_grad()
-            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask, hint_input=self.hint_input)
+            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask, hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
             loss.backward()
             self.optG.step()
             # with self.warmup_scheduler.dampening():
@@ -153,17 +154,25 @@ class Palette(BaseModel):
                     if self.task in ['inpainting', 'uncropping']:
                         self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image,
                                                                                  y_0=self.gt_image, mask=self.mask,
-                                                                                 sample_num=self.sample_num,phase='val', hint_input=self.hint_input)
+                                                                                 sample_num=self.sample_num,
+                                                                                 phase='val',
+                                                                                 hint_input=self.hint_input,
+                                                                                 use_mask_guided=self.use_mask_guided)
                     else:
                         self.output, self.visuals = self.netG.module.restoration(self.cond_image,
-                                                                                 sample_num=self.sample_num,phase='val', hint_input=self.hint_input)
+                                                                                 sample_num=self.sample_num,
+                                                                                 phase='val',
+                                                                                 hint_input=self.hint_input,
+                                                                                 use_mask_guided=self.use_mask_guided)
                 else:
                     if self.task in ['inpainting', 'uncropping']:
                         self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image,
                                                                           y_0=self.gt_image, mask=self.mask,
-                                                                          sample_num=self.sample_num,phase='val', hint_input=self.hint_input)
+                                                                          sample_num=self.sample_num, phase='val',
+                                                                          hint_input=self.hint_input,
+                                                                          use_mask_guided=self.use_mask_guided)
                     else:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num,phase='val',hint_input=self.hint_input)
+                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num,phase='val',hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
 
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='val')
@@ -192,17 +201,17 @@ class Palette(BaseModel):
                     if self.task in ['inpainting', 'uncropping']:
                         self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image,
                                                                                  y_0=self.gt_image, mask=self.mask,
-                                                                                 sample_num=self.sample_num,phase='test', hint_input=self.hint_input)
+                                                                                 sample_num=self.sample_num,phase='test', hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
                     else:
                         self.output, self.visuals = self.netG.module.restoration(self.cond_image,
-                                                                                 sample_num=self.sample_num,phase='test', hint_input=self.hint_input)
+                                                                                 sample_num=self.sample_num,phase='test', hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
                 else:
                     if self.task in ['inpainting', 'uncropping']:
                         self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image,
                                                                           y_0=self.gt_image, mask=self.mask,
-                                                                          sample_num=self.sample_num,phase='test', hint_input=self.hint_input)
+                                                                          sample_num=self.sample_num,phase='test', hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
                     else:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num,phase='test', hint_input=self.hint_input)
+                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num,phase='test', hint_input=self.hint_input, use_mask_guided=self.use_mask_guided)
 
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='test')

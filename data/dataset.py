@@ -144,7 +144,11 @@ class UncroppingDataset(data.Dataset):
 
 class ColorizationDataset(data.Dataset):
     def __init__(self, data_root, data_flist, data_len=-1, image_size=[512, 512], loader=pil_loader,
+<<<<<<< Updated upstream
                  color_hint_root=None, color_mask_root=None, phase='train'):
+=======
+                 color_hint_root=None, color_mask_root=None, phase='train', use_mask_guided=True):
+>>>>>>> Stashed changes
         self.data_root = data_root
         flist = make_dataset(data_flist)
         if data_len > 0:
@@ -161,6 +165,7 @@ class ColorizationDataset(data.Dataset):
         self.color_hint_root = color_hint_root
         self.color_mask_root = color_mask_root
         self.phase = phase
+        self.use_mask_guided = use_mask_guided
 
     def _resolve_pair_folders(self):
         if self.phase == 'train':
@@ -174,9 +179,11 @@ class ColorizationDataset(data.Dataset):
         # corresponding_file_name = file_name.replace('_s1_', '_s2_')
         img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, "A", file_name)))
         cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, "B", file_name)))
-        if self.color_hint_root is not None and self.color_mask_root is not None:
+        if self.color_hint_root is not None and (not self.use_mask_guided or self.color_mask_root is not None):
             hint_rgb = self.tfs(self.loader(os.path.join(self.color_hint_root, file_name)))
-            hint_mask = self.tfs(self.loader(os.path.join(self.color_mask_root, file_name)))[0:1]
+            if self.color_mask_root is not None:
+                hint_mask = self.tfs(self.loader(os.path.join(self.color_mask_root, file_name)))[0:1]
+                hint_mask = torch.zeros(1, self.image_size[0], self.image_size[1], dtype=img.dtype)
             ret['hint_input'] = torch.cat([hint_rgb, hint_mask], dim=0)
         else:
             ret['hint_input'] = torch.zeros(4, self.image_size[0], self.image_size[1], dtype=img.dtype)
